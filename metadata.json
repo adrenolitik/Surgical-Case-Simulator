@@ -1,0 +1,7 @@
+{
+  "name": "Surgical Case Simulator: Appendicitis",
+  "description": "An interactive virtual patient simulator for medical students to practice diagnosing a case of acute appendicitis. Students can interview the patient, review examination data and lab results, and formulate a diagnosis and treatment plan with AI-driven feedback.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
