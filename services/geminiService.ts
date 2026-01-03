@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, Chat, Modality } from "@google/genai";
 import { PATIENT_PERSONA_PROMPT, DATA_GENERATION_PROMPTS, EVALUATION_PROMPT } from '../constants';
 import { DataTab } from "../types";
@@ -9,7 +10,7 @@ let patientChat: Chat | null = null;
 export function startPatientChat(): Chat {
     if (!patientChat) {
         patientChat = ai.chats.create({
-            model: 'gemini-2.5-flash',
+            model: 'gemini-3-flash-preview',
             config: {
                 systemInstruction: PATIENT_PERSONA_PROMPT,
             },
@@ -24,7 +25,7 @@ export async function getPatientResponse(chat: Chat, message: string): Promise<s
         return result.text;
     } catch (error) {
         console.error("Error getting patient response:", error);
-        return "Sorry, I'm not feeling well enough to answer that right now.";
+        return "I... I'm really hurting. Can you help me?";
     }
 }
 
@@ -36,7 +37,7 @@ export async function generatePatientData(dataType: DataTab): Promise<string> {
     }
     try {
         const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
+            model: 'gemini-3-flash-preview',
             contents: prompt,
         });
         return response.text;
@@ -50,7 +51,7 @@ export async function evaluateDiagnosis(submission: string): Promise<string> {
     const fullPrompt = `${EVALUATION_PROMPT}\n\nStudent's Submission:\n---\n${submission}\n---`;
     try {
         const response = await ai.models.generateContent({
-            model: 'gemini-2.5-pro',
+            model: 'gemini-3-pro-preview',
             contents: fullPrompt,
         });
         return response.text;
@@ -62,16 +63,32 @@ export async function evaluateDiagnosis(submission: string): Promise<string> {
 
 export async function generatePatientImage(): Promise<string> {
     try {
-        const response = await ai.models.generateImages({
-            model: 'imagen-4.0-generate-001',
-            prompt: 'Photorealistic portrait of a 22-year-old male student. He looks unwell, pale, and is in visible discomfort, consistent with symptoms of acute abdominal pain.',
-            config: {
-                numberOfImages: 1,
-                outputMimeType: 'image/jpeg',
-                aspectRatio: '1:1',
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash-image',
+            contents: {
+                parts: [
+                    {
+                        text: 'Photorealistic medical portrait of Arjun, a 22-year-old young man from India. He has dark hair, brown eyes, and tan skin. He looks visibly unwell, pale, and in significant discomfort, holding his lower abdomen. Professional clinical photography style, emergency room background, realistic textures.',
+                    },
+                ],
             },
+            config: {
+                imageConfig: {
+                    aspectRatio: "1:1"
+                }
+            }
         });
-        return response.generatedImages[0].image.imageBytes;
+
+        let base64Image = "";
+        for (const part of response.candidates[0].content.parts) {
+            if (part.inlineData) {
+                base64Image = part.inlineData.data;
+                break;
+            }
+        }
+        
+        if (!base64Image) throw new Error("No image data in response.");
+        return base64Image;
     } catch (error) {
         console.error("Error generating patient image:", error);
         throw new Error("Could not generate patient image.");
@@ -79,7 +96,7 @@ export async function generatePatientImage(): Promise<string> {
 }
 
 
-export async function generateSpeech(text: string): Promise<string> {
+export async function generateSpeech(text: string, voiceName: 'Kore' | 'Puck' = 'Kore'): Promise<string> {
     try {
         const response = await ai.models.generateContent({
             model: "gemini-2.5-flash-preview-tts",
@@ -88,7 +105,7 @@ export async function generateSpeech(text: string): Promise<string> {
                 responseModalities: [Modality.AUDIO],
                 speechConfig: {
                     voiceConfig: {
-                        prebuiltVoiceConfig: { voiceName: 'Kore' },
+                        prebuiltVoiceConfig: { voiceName },
                     },
                 },
             },

@@ -1,3 +1,4 @@
+
 export enum Sender {
   User = 'user',
   Patient = 'patient',
@@ -10,12 +11,27 @@ export interface ChatMessage {
 }
 
 export enum DataTab {
+  History = 'Medical History',
   Exam = 'Physical Exam',
   Labs = 'Lab Results',
   Imaging = 'Imaging',
 }
 
+export enum Gender {
+  Male = 'male',
+  Female = 'female',
+}
+
+export interface PatientProfile {
+  name: string;
+  age: number;
+  gender: Gender;
+  location: string;
+  occupation: string;
+}
+
 export interface PatientData {
+  [DataTab.History]: string | null;
   [DataTab.Exam]: string | null;
   [DataTab.Labs]: string | null;
   [DataTab.Imaging]: string | null;

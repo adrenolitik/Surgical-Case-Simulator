@@ -7,6 +7,51 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Surgical Case Simulator</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      @keyframes checkmark-draw {
+        0% { stroke-dashoffset: 48; }
+        100% { stroke-dashoffset: 0; }
+      }
+      .animate-draw {
+        stroke-dasharray: 48;
+        stroke-dashoffset: 48;
+        animation: checkmark-draw 0.6s ease-in-out forwards;
+      }
+      
+      @keyframes confetti-fall {
+        0% { transform: translateY(-100vh) rotate(0deg); opacity: 1; }
+        100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+      }
+      .confetti {
+        position: fixed;
+        width: 10px;
+        height: 10px;
+        background-color: #f00;
+        z-index: 1000;
+        pointer-events: none;
+        animation: confetti-fall 3s linear forwards;
+      }
+      
+      @keyframes waveform {
+        0% { height: 4px; }
+        50% { height: 24px; }
+        100% { height: 8px; }
+      }
+      .waveform-bar {
+        width: 3px;
+        background-color: #3b82f6;
+        border-radius: 2px;
+        animation: waveform 0.6s ease-in-out infinite;
+      }
+
+      .no-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+      .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+    </style>
   <script type="importmap">
 {
   "imports": {

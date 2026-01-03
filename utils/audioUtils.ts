@@ -1,3 +1,4 @@
+
 function decode(base64: string): Uint8Array {
   const binaryString = atob(base64);
   const len = binaryString.length;
@@ -27,7 +28,12 @@ async function decodeAudioData(
   return buffer;
 }
 
-export async function playAudio(base64Audio: string, audioContext: AudioContext, onEnded: () => void) {
+export async function playAudio(
+  base64Audio: string, 
+  audioContext: AudioContext, 
+  onEnded: () => void,
+  analyser?: AnalyserNode
+) {
     if (!base64Audio || !audioContext) {
         onEnded();
         return;
@@ -37,11 +43,19 @@ export async function playAudio(base64Audio: string, audioContext: AudioContext,
         const audioBuffer = await decodeAudioData(audioBytes, audioContext);
         const source = audioContext.createBufferSource();
         source.buffer = audioBuffer;
+        
+        // Connect to destination
         source.connect(audioContext.destination);
+        
+        // Connect to analyser if provided for lip-sync
+        if (analyser) {
+            source.connect(analyser);
+        }
+
         source.onended = onEnded;
         source.start();
     } catch (error) {
         console.error("Failed to play audio:", error);
-        onEnded(); // Ensure state is reset even on error
+        onEnded(); 
     }
 }
