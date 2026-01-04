@@ -61,10 +61,14 @@ function App() {
     const fetchInitialData = async () => {
         setIsAvatarLoading(true);
         try {
+            // Загружаем аватар
             const imageBytes = await generatePatientImage();
             setPatientAvatarUrl(`data:image/jpeg;base64,${imageBytes}`);
+            
+            // Автоматически загружаем историю болезни (Medical History)
+            handleGenerateData(DataTab.History);
         } catch (error) {
-            console.error("Failed to load patient avatar:", error);
+            console.error("Failed to load initial data:", error);
         } finally {
             setIsAvatarLoading(false);
         }
@@ -206,6 +210,7 @@ function App() {
   };
 
   const handleGenerateData = async (tab: DataTab) => {
+      // Если данные уже есть или грузятся — ничего не делаем
       if (patientData[tab] || isDataLoading[tab]) return;
       
       setIsDataLoading(prev => ({ ...prev, [tab]: true }));

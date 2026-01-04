@@ -3,8 +3,7 @@ import { GoogleGenAI, Chat, Modality, Type } from "@google/genai";
 import { PATIENT_PERSONA_PROMPT, DATA_GENERATION_PROMPTS, EVALUATION_PROMPT } from '../constants';
 import { DataTab, EvaluationReport } from "../types";
 
-const apiKey = import.meta.env.VITE_API_KEY || '';
-const ai = new GoogleGenAI({ apiKey });
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 let patientChat: Chat | null = null;
 

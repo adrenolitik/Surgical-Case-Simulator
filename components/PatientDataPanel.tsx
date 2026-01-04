@@ -147,6 +147,14 @@ const PatientDataPanel: React.FC<PatientDataPanelProps> = ({
         }
     };
 
+    const handleTabClick = (tab: DataTab) => {
+        setActiveTab(tab);
+        // Если данных еще нет, автоматически запускаем генерацию при клике
+        if (!patientData[tab] && !isDataLoading[tab]) {
+            onGenerateData(tab);
+        }
+    };
+
     const handleSubmit = () => {
         if (isRecordingSubmission) {
             recognitionRef.current.stop();
@@ -175,13 +183,13 @@ const PatientDataPanel: React.FC<PatientDataPanelProps> = ({
                         <ClipboardIcon className="w-8 h-8 text-slate-500" />
                     </div>
                     <p className="mb-4 text-slate-400 text-sm">
-                        This information has not been retrieved yet. Ask the patient about it to unlock the data.
+                        This clinical information is currently locked. You can request access below or try to uncover it through consultation.
                     </p>
                     <button
                         onClick={() => onGenerateData(activeTab)}
                         className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-full transition-all shadow-lg active:scale-95"
                     >
-                        Request Chart Access
+                        Force Unlock Chart
                     </button>
                 </div>
             );
@@ -216,10 +224,11 @@ const PatientDataPanel: React.FC<PatientDataPanelProps> = ({
                     <nav className="flex space-x-1 p-2 overflow-x-auto no-scrollbar">
                         {Object.values(DataTab).map((tab) => {
                             const isLoaded = !!patientData[tab];
+                            const isLoading = isDataLoading[tab];
                             return (
                                 <button
                                     key={tab}
-                                    onClick={() => setActiveTab(tab)}
+                                    onClick={() => handleTabClick(tab)}
                                     className={`relative px-4 py-2.5 text-xs font-bold rounded-md transition-all whitespace-nowrap flex items-center gap-1.5 ${
                                         activeTab === tab
                                             ? 'bg-blue-600 text-white shadow-lg'
@@ -227,7 +236,8 @@ const PatientDataPanel: React.FC<PatientDataPanelProps> = ({
                                     }`}
                                 >
                                     {tab}
-                                    {isLoaded && (
+                                    {isLoading && <div className="w-2 h-2 rounded-full bg-blue-300 animate-pulse"></div>}
+                                    {isLoaded && !isLoading && (
                                         <div className="w-4 h-4 bg-emerald-500 rounded-full flex items-center justify-center animate-in zoom-in">
                                             <CheckCircleIcon className="w-3 h-3 text-white" />
                                         </div>
