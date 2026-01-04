@@ -88,7 +88,7 @@ export async function evaluateDiagnosis(submission: string): Promise<EvaluationR
         
         // Remove markdown code blocks if present
         const jsonStr = text.startsWith('```json') ? text.replace(/```json|```/g, '').trim() : text;
-        return JSON.parse(jsonStr);
+        return JSON.parse(jsonStr) as EvaluationReport;
     } catch (error) {
         console.error("Error during evaluation:", error);
         throw error;
@@ -115,7 +115,7 @@ export async function generatePatientImage(): Promise<string> {
 
         let base64Image = "";
         const candidates = response.candidates;
-        if (candidates && candidates.length > 0) {
+        if (candidates && candidates.length > 0 && candidates[0].content && candidates[0].content.parts) {
             for (const part of candidates[0].content.parts) {
                 if (part.inlineData && part.inlineData.data) {
                     base64Image = part.inlineData.data;
