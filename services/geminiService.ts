@@ -22,7 +22,7 @@ export function startPatientChat(): Chat {
 export async function getPatientResponse(chat: Chat, message: string): Promise<string> {
     try {
         const result = await chat.sendMessage({ message });
-        return result.text;
+        return result.text || "I... I'm really hurting. Can you help me?";
     } catch (error) {
         console.error("Error getting patient response:", error);
         return "I... I'm really hurting. Can you help me?";
@@ -40,7 +40,7 @@ export async function generatePatientData(dataType: DataTab): Promise<string> {
             model: 'gemini-3-flash-preview',
             contents: prompt,
         });
-        return response.text;
+        return response.text || "No data returned from the server.";
     } catch (error) {
         console.error(`Error generating ${dataType}:`, error);
         return `Error generating data for ${dataType}. Please try again.`;
@@ -83,7 +83,9 @@ export async function evaluateDiagnosis(submission: string): Promise<EvaluationR
             }
         });
         
-        const text = response.text.trim();
+        const text = (response.text || "").trim();
+        if (!text) throw new Error("Empty evaluation response.");
+        
         // Remove markdown code blocks if present
         const jsonStr = text.startsWith('```json') ? text.replace(/```json|```/g, '').trim() : text;
         return JSON.parse(jsonStr);
@@ -112,10 +114,13 @@ export async function generatePatientImage(): Promise<string> {
         });
 
         let base64Image = "";
-        for (const part of response.candidates[0].content.parts) {
-            if (part.inlineData) {
-                base64Image = part.inlineData.data;
-                break;
+        const candidates = response.candidates;
+        if (candidates && candidates.length > 0) {
+            for (const part of candidates[0].content.parts) {
+                if (part.inlineData && part.inlineData.data) {
+                    base64Image = part.inlineData.data;
+                    break;
+                }
             }
         }
         
