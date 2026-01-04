@@ -86,6 +86,14 @@ interface PatientDataPanelProps {
     patientProfile: PatientProfile;
 }
 
+interface OrderItem {
+    id: string;
+    label: string;
+    description: string;
+    feedback: string;
+    completed: boolean;
+}
+
 const PatientDataPanel: React.FC<PatientDataPanelProps> = ({
     patientData,
     onGenerateData,
@@ -103,6 +111,31 @@ const PatientDataPanel: React.FC<PatientDataPanelProps> = ({
     const [submission, setSubmission] = useState('');
     const [isRecordingSubmission, setIsRecordingSubmission] = useState(false);
     
+    // Interactive Orders State
+    const [orders, setOrders] = useState<OrderItem[]>([
+        { 
+            id: 'npo', 
+            label: 'NPO (Nothing by Mouth)', 
+            description: 'Order the patient to stop consuming food and liquids.',
+            feedback: 'Correct. Maintaining NPO status is critical for surgical patients to prevent aspiration pneumonia during anesthesia induction.',
+            completed: false 
+        },
+        { 
+            id: 'ivf', 
+            label: 'IV Fluids (Resuscitation)', 
+            description: 'Start isotonic intravenous fluids (e.g., NS or LR).',
+            feedback: 'Excellent. Patients with appendicitis often have significant third-space fluid loss and dehydration. Isotonic crystalloids help restore intravascular volume.',
+            completed: false 
+        },
+        { 
+            id: 'abx', 
+            label: 'Antibiotics (Prophylactic)', 
+            description: 'Administer broad-spectrum IV antibiotics.',
+            feedback: 'Standard of care. Prophylactic antibiotics should cover gram-negative and anaerobic organisms (e.g., 2nd gen cephalosporins) to reduce surgical site infections.',
+            completed: false 
+        }
+    ]);
+
     const recognitionRef = useRef<any | null>(null);
 
     useEffect(() => {
@@ -149,10 +182,15 @@ const PatientDataPanel: React.FC<PatientDataPanelProps> = ({
 
     const handleTabClick = (tab: DataTab) => {
         setActiveTab(tab);
-        // Если данных еще нет, автоматически запускаем генерацию при клике
         if (!patientData[tab] && !isDataLoading[tab]) {
             onGenerateData(tab);
         }
+    };
+
+    const handleToggleOrder = (id: string) => {
+        setOrders(prev => prev.map(order => 
+            order.id === id ? { ...order, completed: !order.completed } : order
+        ));
     };
 
     const handleSubmit = () => {
@@ -248,11 +286,49 @@ const PatientDataPanel: React.FC<PatientDataPanelProps> = ({
                     </nav>
                 </div>
                 
-                <div className="flex-grow overflow-y-auto bg-slate-900/30 scroll-smooth">
-                    {renderTabContent()}
+                <div className="flex-grow overflow-y-auto bg-slate-900/30 scroll-smooth px-4 pt-4">
+                    {/* Tab Content Section */}
+                    <div className="mb-6">
+                        {renderTabContent()}
+                    </div>
+
+                    {/* NEW: Clinical Orders Section */}
+                    <div className="mb-8 p-4 bg-slate-800/40 rounded-xl border border-slate-700/50 shadow-inner">
+                        <div className="flex items-center gap-2 mb-4">
+                            <div className="w-7 h-7 bg-blue-500/20 rounded flex items-center justify-center">
+                                <ClipboardIcon className="w-4 h-4 text-blue-400" />
+                            </div>
+                            <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Immediate Clinical Orders</h3>
+                        </div>
+                        <div className="space-y-4">
+                            {orders.map((order) => (
+                                <div key={order.id} className="group">
+                                    <div 
+                                        onClick={() => handleToggleOrder(order.id)}
+                                        className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all duration-300 ${order.completed ? 'bg-emerald-500/5 border-emerald-500/30' : 'bg-slate-900/40 border-slate-700 hover:border-slate-500'}`}
+                                    >
+                                        <div className={`mt-0.5 w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${order.completed ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-slate-600'}`}>
+                                            {order.completed && <CheckCircleIcon className="w-4 h-4" />}
+                                        </div>
+                                        <div className="flex-grow">
+                                            <div className={`text-sm font-bold transition-colors ${order.completed ? 'text-emerald-400' : 'text-slate-300 group-hover:text-white'}`}>
+                                                {order.label}
+                                            </div>
+                                            <div className="text-[11px] text-slate-500 mt-0.5 leading-tight">{order.description}</div>
+                                        </div>
+                                    </div>
+                                    {order.completed && (
+                                        <div className="mt-2 ml-8 p-2 text-[11px] text-emerald-100/70 border-l-2 border-emerald-500/30 bg-emerald-500/5 rounded-r animate-in slide-in-from-left-2 duration-300">
+                                            {order.feedback}
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
                     
                     {evaluation && (
-                        <div className="p-4 border-t border-slate-700 bg-slate-900/50 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                        <div className="pb-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
                              <div className={`p-6 rounded-xl border mb-6 flex flex-col items-center justify-center text-center shadow-xl ${getScoreColor(evaluation.score)}`}>
                                 <div className="text-[10px] uppercase tracking-widest font-black mb-1 opacity-60">Surgical Readiness Score</div>
                                 <div className="text-6xl font-black mb-2">{evaluation.score}</div>
@@ -302,7 +378,7 @@ const PatientDataPanel: React.FC<PatientDataPanelProps> = ({
                             <div className="w-8 h-8 rounded-full bg-blue-900/50 flex items-center justify-center">
                                 <ClipboardIcon className="w-5 h-5 text-blue-400" />
                             </div>
-                            Surgical Management Plan
+                            Formulate Surgical Plan
                          </h3>
                          <button 
                             onClick={handleToggleRecording}
@@ -314,7 +390,7 @@ const PatientDataPanel: React.FC<PatientDataPanelProps> = ({
                      <textarea
                         value={submission}
                         onChange={(e) => setSubmission(e.target.value)}
-                        placeholder="State your diagnosis and detailed pre-op/surgical plan..."
+                        placeholder="State your diagnosis and final surgical management strategy..."
                         className="w-full h-24 bg-slate-900 p-3 rounded-md border border-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-600 text-slate-200 text-sm resize-none"
                         disabled={isEvaluating}
                      />
@@ -323,7 +399,7 @@ const PatientDataPanel: React.FC<PatientDataPanelProps> = ({
                         disabled={isEvaluating || !submission.trim()}
                         className="mt-3 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-4 rounded-md transition-all shadow-lg active:scale-95 disabled:bg-slate-700 flex justify-center items-center gap-2"
                      >
-                        {isEvaluating ? <Spinner /> : <span>Submit Case for Review</span>}
+                        {isEvaluating ? <Spinner /> : <span>Submit for Final Review</span>}
                      </button>
                 </div>
             </div>
