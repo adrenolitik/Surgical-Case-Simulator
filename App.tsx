@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ChatPanel from './components/ChatPanel';
 import PatientDataPanel from './components/PatientDataPanel';
-import { ChatMessage, DataTab, PatientData, Sender, Gender, PatientProfile } from './types';
+import { ChatMessage, DataTab, PatientData, Sender, Gender, PatientProfile, EvaluationReport } from './types';
 import { INITIAL_MESSAGES } from './constants';
 import { startPatientChat, getPatientResponse, generatePatientData, evaluateDiagnosis, generatePatientImage, generateSpeech } from './services/geminiService';
 import { playAudio } from './utils/audioUtils';
@@ -21,7 +21,6 @@ function App() {
   const [isPatientSpeaking, setIsPatientSpeaking] = useState(false);
   const [speechVolume, setSpeechVolume] = useState(0);
 
-  // Patient profile configuration
   const [patientProfile] = useState<PatientProfile>({
     name: "Arjun Nair",
     age: 22,
@@ -45,7 +44,7 @@ function App() {
       [DataTab.Imaging]: false,
   });
 
-  const [evaluation, setEvaluation] = useState<string | null>(null);
+  const [evaluation, setEvaluation] = useState<EvaluationReport | null>(null);
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [confetti, setConfetti] = useState<{ id: number; color: string; left: string; delay: string }[]>([]);
 
@@ -60,7 +59,6 @@ function App() {
     chatRef.current = startPatientChat();
     
     const fetchInitialData = async () => {
-        // Fetch avatar
         setIsAvatarLoading(true);
         try {
             const imageBytes = await generatePatientImage();
@@ -70,9 +68,6 @@ function App() {
         } finally {
             setIsAvatarLoading(false);
         }
-
-        // AUTO-GENERATE Medical History on load as requested
-        handleGenerateData(DataTab.History);
     };
     
     fetchInitialData();
@@ -240,12 +235,11 @@ function App() {
       setIsEvaluating(true);
       setEvaluation(null);
       try {
-          const feedback = await evaluateDiagnosis(submission);
-          setEvaluation(feedback);
-          triggerCelebration();
+          const report = await evaluateDiagnosis(submission);
+          setEvaluation(report);
+          if (report.score >= 80) triggerCelebration();
       } catch (error) {
           console.error("Error during evaluation:", error);
-          setEvaluation("An error occurred during the review process.");
       } finally {
           setIsEvaluating(false);
       }

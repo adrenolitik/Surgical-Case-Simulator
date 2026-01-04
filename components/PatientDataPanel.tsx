@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { DataTab, PatientData, PatientProfile, Gender } from '../types';
+import { DataTab, PatientData, PatientProfile, Gender, EvaluationReport } from '../types';
 import Spinner from './Spinner';
 import { ClipboardIcon, CheckCircleIcon, MicrophoneIcon, StopCircleIcon } from './icons';
 
@@ -76,7 +76,7 @@ interface PatientDataPanelProps {
     patientData: PatientData;
     onGenerateData: (tab: DataTab) => void;
     isDataLoading: Record<DataTab, boolean>;
-    evaluation: string | null;
+    evaluation: EvaluationReport | null;
     onEvaluate: (submission: string) => void;
     isEvaluating: boolean;
     patientAvatarUrl: string | null;
@@ -101,7 +101,6 @@ const PatientDataPanel: React.FC<PatientDataPanelProps> = ({
 }) => {
     const [activeTab, setActiveTab] = useState<DataTab>(DataTab.History);
     const [submission, setSubmission] = useState('');
-    const [copied, setCopied] = useState(false);
     const [isRecordingSubmission, setIsRecordingSubmission] = useState(false);
     
     const recognitionRef = useRef<any | null>(null);
@@ -148,14 +147,6 @@ const PatientDataPanel: React.FC<PatientDataPanelProps> = ({
         }
     };
 
-    const handleCopyToClipboard = () => {
-        if (evaluation) {
-            navigator.clipboard.writeText(evaluation);
-            setCopied(true);
-            setTimeout(() => setCopied(false), 2000);
-        }
-    };
-
     const handleSubmit = () => {
         if (isRecordingSubmission) {
             recognitionRef.current.stop();
@@ -184,13 +175,13 @@ const PatientDataPanel: React.FC<PatientDataPanelProps> = ({
                         <ClipboardIcon className="w-8 h-8 text-slate-500" />
                     </div>
                     <p className="mb-4 text-slate-400 text-sm">
-                        This specific information has not been retrieved from the chart yet.
+                        This information has not been retrieved yet. Ask the patient about it to unlock the data.
                     </p>
                     <button
                         onClick={() => onGenerateData(activeTab)}
                         className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-full transition-all shadow-lg active:scale-95"
                     >
-                        Retrieve Data
+                        Request Chart Access
                     </button>
                 </div>
             );
@@ -204,8 +195,14 @@ const PatientDataPanel: React.FC<PatientDataPanelProps> = ({
         );
     };
 
+    const getScoreColor = (score: number) => {
+        if (score >= 80) return 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10';
+        if (score >= 50) return 'text-amber-400 border-amber-500/30 bg-amber-500/10';
+        return 'text-red-400 border-red-500/30 bg-red-500/10';
+    };
+
     return (
-        <div className="bg-slate-800/50 rounded-lg flex flex-col h-full border border-slate-700 shadow-2xl">
+        <div className="bg-slate-800/50 rounded-lg flex flex-col h-full border border-slate-700 shadow-2xl overflow-hidden">
             <PatientAvatar 
                 avatarUrl={patientAvatarUrl} 
                 isLoading={isAvatarLoading} 
@@ -213,28 +210,6 @@ const PatientDataPanel: React.FC<PatientDataPanelProps> = ({
                 speechVolume={speechVolume}
                 profile={patientProfile}
             />
-
-            {/* Clinical Brief Section - Always Visible Overview */}
-            <div className="px-4 py-2 bg-blue-900/20 border-b border-slate-700/50">
-                <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold text-blue-400 uppercase tracking-tighter">Clinical Brief</span>
-                    <span className="text-[10px] text-slate-500 italic">Auto-Synced</span>
-                </div>
-                <div className="flex gap-4 mt-1">
-                    <div className="flex-1">
-                        <p className="text-xs font-semibold text-slate-300">Triage Status</p>
-                        <p className="text-[10px] text-red-400 font-bold uppercase animate-pulse">Acute Abdomen</p>
-                    </div>
-                    <div className="flex-1">
-                        <p className="text-xs font-semibold text-slate-300">Main Symptom</p>
-                        <p className="text-[10px] text-slate-400">Migratory RLQ Pain</p>
-                    </div>
-                    <div className="flex-1 text-right">
-                        <p className="text-xs font-semibold text-slate-300">Case ID</p>
-                        <p className="text-[10px] text-slate-500">#SURG-77421</p>
-                    </div>
-                </div>
-            </div>
 
             <div className="flex-grow flex flex-col min-h-0">
                 <div className="border-b border-slate-700 bg-slate-800/80">
@@ -245,7 +220,7 @@ const PatientDataPanel: React.FC<PatientDataPanelProps> = ({
                                 <button
                                     key={tab}
                                     onClick={() => setActiveTab(tab)}
-                                    className={`relative px-3 py-2 text-xs font-bold rounded-md transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                                    className={`relative px-4 py-2.5 text-xs font-bold rounded-md transition-all whitespace-nowrap flex items-center gap-1.5 ${
                                         activeTab === tab
                                             ? 'bg-blue-600 text-white shadow-lg'
                                             : 'text-slate-400 hover:bg-slate-700/50 hover:text-slate-200'
@@ -262,57 +237,84 @@ const PatientDataPanel: React.FC<PatientDataPanelProps> = ({
                         })}
                     </nav>
                 </div>
+                
                 <div className="flex-grow overflow-y-auto bg-slate-900/30 scroll-smooth">
                     {renderTabContent()}
+                    
+                    {evaluation && (
+                        <div className="p-4 border-t border-slate-700 bg-slate-900/50 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                             <div className={`p-6 rounded-xl border mb-6 flex flex-col items-center justify-center text-center shadow-xl ${getScoreColor(evaluation.score)}`}>
+                                <div className="text-[10px] uppercase tracking-widest font-black mb-1 opacity-60">Surgical Readiness Score</div>
+                                <div className="text-6xl font-black mb-2">{evaluation.score}</div>
+                                <div className="text-sm font-semibold max-w-sm">{evaluation.overallSummary}</div>
+                             </div>
+
+                             <h4 className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-3 ml-1">Critical Task Analysis</h4>
+                             <div className="space-y-3 mb-6">
+                                {evaluation.criticalChecklist.map((item, i) => (
+                                    <div key={i} className={`p-4 rounded-lg border flex gap-4 items-start ${item.status ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-red-500/5 border-red-500/20'}`}>
+                                        <div className={`p-1 rounded-full mt-0.5 ${item.status ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'}`}>
+                                            {item.status ? <CheckCircleIcon className="w-4 h-4" /> : <div className="w-4 h-4 flex items-center justify-center font-bold text-xs">X</div>}
+                                        </div>
+                                        <div>
+                                            <div className={`text-sm font-bold ${item.status ? 'text-emerald-400' : 'text-red-400'}`}>{item.task}</div>
+                                            <div className="text-xs text-slate-400 mt-1 leading-relaxed">{item.feedback}</div>
+                                        </div>
+                                    </div>
+                                ))}
+                             </div>
+
+                             {evaluation.missedOpportunities.length > 0 && (
+                                <div className="mb-6">
+                                    <h4 className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-3 ml-1">Missed Opportunities</h4>
+                                    <ul className="list-disc list-inside space-y-2 text-xs text-slate-400 bg-slate-800/50 p-4 rounded-lg border border-slate-700">
+                                        {evaluation.missedOpportunities.map((op, i) => (
+                                            <li key={i}>{op}</li>
+                                        ))}
+                                    </ul>
+                                </div>
+                             )}
+
+                             <div className="p-5 bg-gradient-to-br from-blue-600/20 to-indigo-600/20 border border-blue-500/30 rounded-xl">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <div className="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></div>
+                                    <h4 className="text-xs font-black uppercase tracking-widest text-blue-300">Surgical Pearl</h4>
+                                </div>
+                                <div className="text-sm text-blue-100 italic leading-relaxed">"{evaluation.textbookInsight}"</div>
+                             </div>
+                        </div>
+                    )}
                 </div>
+
                 <div className="p-4 border-t border-slate-700 bg-slate-800/80">
                      <div className="flex justify-between items-center mb-2">
                          <h3 className="text-sm font-bold flex items-center gap-2 text-slate-200">
                             <div className="w-8 h-8 rounded-full bg-blue-900/50 flex items-center justify-center">
                                 <ClipboardIcon className="w-5 h-5 text-blue-400" />
                             </div>
-                            Diagnostic Submission
+                            Surgical Management Plan
                          </h3>
                          <button 
                             onClick={handleToggleRecording}
                             className={`p-1.5 rounded-full transition-all ${isRecordingSubmission ? 'bg-red-500 text-white animate-pulse' : 'text-slate-400 hover:text-blue-400 hover:bg-slate-700'}`}
-                            title={isRecordingSubmission ? "Stop Recording" : "Voice Input"}
                          >
                             {isRecordingSubmission ? <StopCircleIcon className="w-5 h-5" /> : <MicrophoneIcon className="w-5 h-5" />}
                          </button>
                      </div>
-                     <div className="relative">
-                        <textarea
-                            value={submission}
-                            onChange={(e) => setSubmission(e.target.value)}
-                            placeholder={isRecordingSubmission ? "Listening... Speak your diagnosis clearly." : "Type diagnosis & surgical plan..."}
-                            className={`w-full h-20 bg-slate-900 p-3 rounded-md border transition-all focus:outline-none focus:ring-2 focus:ring-blue-600 text-slate-200 placeholder-slate-500 text-sm resize-none ${isRecordingSubmission ? 'border-red-500/50' : 'border-slate-700'}`}
-                            disabled={isEvaluating}
-                        />
-                     </div>
+                     <textarea
+                        value={submission}
+                        onChange={(e) => setSubmission(e.target.value)}
+                        placeholder="State your diagnosis and detailed pre-op/surgical plan..."
+                        className="w-full h-24 bg-slate-900 p-3 rounded-md border border-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-600 text-slate-200 text-sm resize-none"
+                        disabled={isEvaluating}
+                     />
                      <button
                         onClick={handleSubmit}
                         disabled={isEvaluating || !submission.trim()}
-                        className="mt-3 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-4 rounded-md transition-all shadow-lg active:scale-95 disabled:bg-slate-700 disabled:cursor-not-allowed flex justify-center items-center gap-2 group"
+                        className="mt-3 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-4 rounded-md transition-all shadow-lg active:scale-95 disabled:bg-slate-700 flex justify-center items-center gap-2"
                      >
-                        {isEvaluating ? <Spinner /> : (
-                            <>
-                                <span>Submit for Review</span>
-                                <CheckCircleIcon className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                            </>
-                        )}
+                        {isEvaluating ? <Spinner /> : <span>Submit Case for Review</span>}
                      </button>
-                     {evaluation && (
-                         <div className="mt-4 animate-in fade-in slide-in-from-bottom-4 duration-700">
-                             <div className="p-4 bg-slate-900 border border-emerald-500/30 rounded-lg shadow-2xl">
-                                 <h4 className="text-sm font-bold text-emerald-400 mb-2 flex items-center gap-2">
-                                    <CheckCircleIcon className="w-4 h-4" />
-                                    Attending Feedback
-                                 </h4>
-                                 <div className="whitespace-pre-wrap text-sm text-slate-300 leading-relaxed border-t border-slate-800 pt-3">{evaluation}</div>
-                             </div>
-                         </div>
-                     )}
                 </div>
             </div>
         </div>

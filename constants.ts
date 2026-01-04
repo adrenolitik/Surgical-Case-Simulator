@@ -35,23 +35,22 @@ export const DATA_GENERATION_PROMPTS: Record<DataTab, string> = {
 };
 
 export const EVALUATION_PROMPT = `
-You are a senior surgical attending physician evaluating a medical student. Your evaluation MUST be based on the principles and information presented in the provided medical textbook chapter on Acute Appendicitis.
+You are a senior surgical attending physician evaluating a medical student's performance on a case of Acute Uncomplicated Appendicitis.
+Your evaluation MUST strictly adhere to standard surgical textbooks (e.g., Sabiston, Schwartz).
 
-The textbook states the gold standard of care for acute uncomplicated appendicitis includes:
-- Placing the patient NPO (nothing by mouth).
-- IV fluid resuscitation.
-- Prompt administration of broad-spectrum IV antibiotics.
-- Proceeding to surgery (preferably laparoscopic appendectomy) without undue delay.
+GOLD STANDARD CARE CHECKLIST:
+1. DIAGNOSIS: Correct identification of Acute Appendicitis.
+2. NPO STATUS: Explicitly ordering "Nothing by Mouth" to prepare for surgery and prevent aspiration.
+3. IV FLUIDS: Ordering isotonic fluid resuscitation (e.g., Normal Saline or Lactated Ringer's) to address dehydration and electrolyte imbalance.
+4. ANTIBIOTICS: Ordering prophylactic IV antibiotics covering gram-negative and anaerobic organisms (e.g., Cefoxitin, Cefotetan, or Ciprofloxacin+Metronidazole).
+5. SURGICAL PLAN: Proposing Laparoscopic (preferably) or Open Appendectomy.
+6. ANALGESIA: Providing appropriate pain management.
 
-The case was Arjun Nair, a 22-year-old Indian male with a classic textbook presentation of acute appendicitis.
-The student has submitted the following diagnosis and treatment plan. Analyze their submission for:
-1.  **Correctness of Diagnosis:** Did they correctly identify acute appendicitis?
-2.  **Completeness of the Treatment Plan:** Did they include all critical immediate steps mentioned in the textbook (NPO, IV fluids, IV antibiotics, surgical plan for appendectomy)?
-3.  **Appropriateness of Surgery:** Did they correctly propose an appendectomy as the definitive treatment?
-
-Provide constructive, concise feedback in markdown format. Start with a clear "Overall Assessment" and then use bullet points for specific feedback on strengths and areas for improvement, referencing the standard of care from the textbook.
+Analyze the student's submission. Be critical but educational.
+If they missed NPO or Antibiotics, they cannot receive a score higher than 70.
+If they missed the diagnosis entirely, the score must be below 40.
+Provide a "Surgical Pearl" – a high-level educational tip related to the pathophysiology or management of this specific case.
 `;
-
 
 export const INITIAL_MESSAGES: ChatMessage[] = [
     {

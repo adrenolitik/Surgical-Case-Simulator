@@ -1,7 +1,7 @@
 
-import { GoogleGenAI, Chat, Modality } from "@google/genai";
+import { GoogleGenAI, Chat, Modality, Type } from "@google/genai";
 import { PATIENT_PERSONA_PROMPT, DATA_GENERATION_PROMPTS, EVALUATION_PROMPT } from '../constants';
-import { DataTab } from "../types";
+import { DataTab, EvaluationReport } from "../types";
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
@@ -47,17 +47,49 @@ export async function generatePatientData(dataType: DataTab): Promise<string> {
     }
 }
 
-export async function evaluateDiagnosis(submission: string): Promise<string> {
+export async function evaluateDiagnosis(submission: string): Promise<EvaluationReport> {
     const fullPrompt = `${EVALUATION_PROMPT}\n\nStudent's Submission:\n---\n${submission}\n---`;
     try {
         const response = await ai.models.generateContent({
             model: 'gemini-3-pro-preview',
             contents: fullPrompt,
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: Type.OBJECT,
+                    properties: {
+                        score: { type: Type.INTEGER, description: "A clinical performance score from 0-100." },
+                        overallSummary: { type: Type.STRING, description: "A high-level overview of the student's performance." },
+                        criticalChecklist: {
+                            type: Type.ARRAY,
+                            items: {
+                                type: Type.OBJECT,
+                                properties: {
+                                    task: { type: Type.STRING },
+                                    status: { type: Type.BOOLEAN },
+                                    feedback: { type: Type.STRING }
+                                },
+                                required: ["task", "status", "feedback"]
+                            }
+                        },
+                        missedOpportunities: {
+                            type: Type.ARRAY,
+                            items: { type: Type.STRING }
+                        },
+                        textbookInsight: { type: Type.STRING, description: "A specific pearl of surgical wisdom." }
+                    },
+                    required: ["score", "overallSummary", "criticalChecklist", "missedOpportunities", "textbookInsight"]
+                }
+            }
         });
-        return response.text;
+        
+        const text = response.text.trim();
+        // Remove markdown code blocks if present
+        const jsonStr = text.startsWith('```json') ? text.replace(/```json|```/g, '').trim() : text;
+        return JSON.parse(jsonStr);
     } catch (error) {
         console.error("Error during evaluation:", error);
-        return "Error performing evaluation. Please try again.";
+        throw error;
     }
 }
 

@@ -36,3 +36,17 @@ export interface PatientData {
   [DataTab.Labs]: string | null;
   [DataTab.Imaging]: string | null;
 }
+
+export interface CriticalTask {
+  task: string;
+  status: boolean;
+  feedback: string;
+}
+
+export interface EvaluationReport {
+  score: number;
+  overallSummary: string;
+  criticalChecklist: CriticalTask[];
+  missedOpportunities: string[];
+  textbookInsight: string;
+}
