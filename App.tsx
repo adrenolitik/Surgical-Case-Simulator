@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import ChatPanel from './components/ChatPanel';
 import PatientDataPanel from './components/PatientDataPanel';
@@ -10,6 +9,8 @@ import { Chat } from '@google/genai';
 
 const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
+const SAVE_KEY = 'surgical_sim_save_v1';
+
 function App() {
   const [messages, setMessages] = useState<ChatMessage[]>(INITIAL_MESSAGES);
   const [input, setInput] = useState('');
@@ -20,6 +21,7 @@ function App() {
   const [isAvatarLoading, setIsAvatarLoading] = useState(true);
   const [isPatientSpeaking, setIsPatientSpeaking] = useState(false);
   const [speechVolume, setSpeechVolume] = useState(0);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saved' | 'loaded'>('idle');
 
   const [patientProfile] = useState<PatientProfile>({
     name: "Arjun Nair",
@@ -28,6 +30,8 @@ function App() {
     location: "Mumbai, India",
     occupation: "Student"
   });
+
+  const [submission, setSubmission] = useState(''); // Lifted state
 
   const patientVoice: 'Kore' | 'Puck' = patientProfile.gender === Gender.Male ? 'Kore' : 'Puck';
 
@@ -61,11 +65,8 @@ function App() {
     const fetchInitialData = async () => {
         setIsAvatarLoading(true);
         try {
-            // Загружаем аватар
             const imageBytes = await generatePatientImage();
             setPatientAvatarUrl(`data:image/jpeg;base64,${imageBytes}`);
-            
-            // Автоматически загружаем историю болезни (Medical History)
             handleGenerateData(DataTab.History);
         } catch (error) {
             console.error("Failed to load initial data:", error);
@@ -111,6 +112,41 @@ function App() {
         if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
     };
   }, []);
+
+  const handleSave = () => {
+    const state = {
+      messages,
+      patientData,
+      evaluation,
+      patientAvatarUrl,
+      submission,
+      timestamp: Date.now()
+    };
+    localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+    setSaveStatus('saved');
+    setTimeout(() => setSaveStatus('idle'), 2000);
+  };
+
+  const handleLoad = () => {
+    const saved = localStorage.getItem(SAVE_KEY);
+    if (!saved) {
+      alert("No saved session found.");
+      return;
+    }
+    try {
+      const state = JSON.parse(saved);
+      setMessages(state.messages);
+      setPatientData(state.patientData);
+      setEvaluation(state.evaluation);
+      setPatientAvatarUrl(state.patientAvatarUrl);
+      setSubmission(state.submission);
+      setSaveStatus('loaded');
+      setTimeout(() => setSaveStatus('idle'), 2000);
+    } catch (e) {
+      console.error("Failed to load save:", e);
+      alert("Error loading save data.");
+    }
+  };
 
   const startVolumeAnalysis = () => {
       if (!analyserRef.current) return;
@@ -210,7 +246,6 @@ function App() {
   };
 
   const handleGenerateData = async (tab: DataTab) => {
-      // Если данные уже есть или грузятся — ничего не делаем
       if (patientData[tab] || isDataLoading[tab]) return;
       
       setIsDataLoading(prev => ({ ...prev, [tab]: true }));
@@ -236,11 +271,11 @@ function App() {
     setTimeout(() => setConfetti([]), 5000);
   };
 
-  const handleEvaluate = async (submission: string) => {
+  const handleEvaluate = async (submissionText: string) => {
       setIsEvaluating(true);
       setEvaluation(null);
       try {
-          const report = await evaluateDiagnosis(submission);
+          const report = await evaluateDiagnosis(submissionText);
           setEvaluation(report);
           if (report.score >= 80) triggerCelebration();
       } catch (error) {
@@ -288,10 +323,25 @@ function App() {
           }}
         />
       ))}
-      <header className="p-4 border-b border-slate-700 bg-slate-800/50 backdrop-blur-md z-10">
-        <h1 className="text-2xl font-bold text-center bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">
-          Surgical Diagnosis Simulator: {patientProfile.name}
+      <header className="p-4 border-b border-slate-700 bg-slate-800/50 backdrop-blur-md z-10 flex items-center justify-between">
+        <div className="w-1/4"></div>
+        <h1 className="text-xl md:text-2xl font-bold text-center bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">
+          Surgical Diagnosis Simulator
         </h1>
+        <div className="w-1/4 flex justify-end gap-2">
+            <button 
+                onClick={handleLoad}
+                className="px-3 py-1 text-xs font-bold border border-slate-600 rounded hover:bg-slate-700 transition-all flex items-center gap-1"
+            >
+                {saveStatus === 'loaded' ? 'Loaded!' : 'Load Session'}
+            </button>
+            <button 
+                onClick={handleSave}
+                className={`px-3 py-1 text-xs font-bold rounded transition-all flex items-center gap-1 ${saveStatus === 'saved' ? 'bg-emerald-600 text-white' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
+            >
+                {saveStatus === 'saved' ? 'Saved!' : 'Save Session'}
+            </button>
+        </div>
       </header>
       <main className="flex-grow p-4 grid grid-cols-1 md:grid-cols-2 gap-4 overflow-hidden z-10">
         <div className="h-full min-h-0">
@@ -318,6 +368,8 @@ function App() {
             isPatientSpeaking={isPatientSpeaking}
             speechVolume={speechVolume}
             patientProfile={patientProfile}
+            submission={submission}
+            setSubmission={setSubmission}
           />
         </div>
       </main>

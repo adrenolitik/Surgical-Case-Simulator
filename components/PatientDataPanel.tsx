@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { DataTab, PatientData, PatientProfile, Gender, EvaluationReport } from '../types';
 import Spinner from './Spinner';
@@ -84,6 +83,8 @@ interface PatientDataPanelProps {
     isPatientSpeaking: boolean;
     speechVolume: number;
     patientProfile: PatientProfile;
+    submission: string;
+    setSubmission: (value: string) => void;
 }
 
 interface OrderItem {
@@ -106,32 +107,33 @@ const PatientDataPanel: React.FC<PatientDataPanelProps> = ({
     isPatientSpeaking,
     speechVolume,
     patientProfile,
+    submission,
+    setSubmission,
 }) => {
     const [activeTab, setActiveTab] = useState<DataTab>(DataTab.History);
-    const [submission, setSubmission] = useState('');
     const [isRecordingSubmission, setIsRecordingSubmission] = useState(false);
     
-    // Critical Clinical Orders
+    // Critical Clinical Orders for Student to Complete
     const [orders, setOrders] = useState<OrderItem[]>([
         { 
             id: 'npo', 
-            label: 'NPO (Nil Per Os)', 
-            description: 'Order the patient to have nothing by mouth.',
-            feedback: 'Standard surgical practice. NPO status minimizes the risk of pulmonary aspiration of gastric contents during anesthesia induction.',
+            label: 'Order NPO Status', 
+            description: 'Patient must have nothing by mouth to prevent aspiration during surgery.',
+            feedback: 'Essential. Ensuring NPO status is the first step in preoperative management to protect the airway during anesthesia induction.',
             completed: false 
         },
         { 
             id: 'ivf', 
             label: 'IV Fluid Resuscitation', 
-            description: 'Start maintenance and replacement isotonic fluids.',
-            feedback: 'Correct. Maintaining intravascular volume and electrolyte balance is vital, especially given potential third-space losses in inflammatory abdominal conditions.',
+            description: 'Order isotonic saline or Lactated Ringer\'s to restore intravascular volume.',
+            feedback: 'Correct. Patients with acute abdominal pathology often have significant fluid deficits from vomiting and third-spacing.',
             completed: false 
         },
         { 
             id: 'abx', 
-            label: 'IV Antibiotics', 
-            description: 'Broad-spectrum coverage for gram-negative and anaerobes.',
-            feedback: 'Critical step. Prophylactic antibiotics significantly reduce surgical site infections and are mandatory for suspected acute appendicitis before surgery.',
+            label: 'Order Pre-Op Antibiotics', 
+            description: 'Broad-spectrum coverage for aerobic and anaerobic intestinal flora.',
+            feedback: 'Vital intervention. Prophylactic antibiotics should be administered within 60 minutes of the surgical incision to reduce infection risk.',
             completed: false 
         }
     ]);
@@ -149,7 +151,7 @@ const PatientDataPanel: React.FC<PatientDataPanelProps> = ({
                 for (let i = event.resultIndex; i < event.results.length; ++i) {
                     if (event.results[i].isFinal) {
                         const transcript = event.results[i][0].transcript;
-                        setSubmission(prev => (prev ? prev + ' ' : '') + transcript.trim());
+                        setSubmission((prev: string) => (prev ? prev + ' ' : '') + transcript.trim());
                     }
                 }
             };
@@ -208,7 +210,7 @@ const PatientDataPanel: React.FC<PatientDataPanelProps> = ({
             return (
                 <div className="flex flex-col justify-center items-center h-48 gap-3">
                     <Spinner />
-                    <p className="text-xs text-blue-400 animate-pulse uppercase tracking-widest font-bold">Accessing Secure Records...</p>
+                    <p className="text-xs text-blue-400 animate-pulse uppercase tracking-widest font-bold">Retrieving Data...</p>
                 </div>
             );
         }
@@ -217,17 +219,17 @@ const PatientDataPanel: React.FC<PatientDataPanelProps> = ({
         if (!data) {
             return (
                 <div className="text-center p-8">
-                    <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-700">
+                    <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-700 shadow-inner">
                         <ClipboardIcon className="w-8 h-8 text-slate-500" />
                     </div>
                     <p className="mb-4 text-slate-400 text-sm">
-                        Clinical data for {activeTab} is currently restricted. Ask the patient relevant questions or request specialized workup.
+                        This information is currently unavailable. Perform a consultation or exam to unlock.
                     </p>
                     <button
                         onClick={() => onGenerateData(activeTab)}
                         className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-full transition-all shadow-lg active:scale-95"
                     >
-                        Force Unlock Chart
+                        Request Chart Access
                     </button>
                 </div>
             );
@@ -292,32 +294,36 @@ const PatientDataPanel: React.FC<PatientDataPanelProps> = ({
                     </div>
 
                     {/* INTERACTIVE CLINICAL ORDERS SECTION */}
-                    <div className="mb-8 bg-slate-800/40 p-5 rounded-xl border border-slate-700/50 shadow-lg">
-                        <div className="flex items-center gap-2 mb-4">
-                            <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center border border-blue-500/30">
-                                <ClipboardIcon className="w-5 h-5 text-blue-400" />
+                    <div className="mb-8 bg-slate-800/60 p-5 rounded-xl border border-slate-700 shadow-lg">
+                        <div className="flex items-center gap-3 mb-5">
+                            <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20 shadow-inner">
+                                <ClipboardIcon className="w-6 h-6 text-blue-400" />
                             </div>
-                            <h3 className="text-xs font-black uppercase tracking-widest text-slate-300">Stat Pre-Op Orders</h3>
+                            <div>
+                                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400 mb-0.5">Critical Pathway</h3>
+                                <h4 className="text-sm font-bold text-slate-100">Stat Pre-Op Orders</h4>
+                            </div>
                         </div>
                         <div className="space-y-4">
                             {orders.map((order) => (
                                 <div key={order.id} className="group">
                                     <div 
                                         onClick={() => handleToggleOrder(order.id)}
-                                        className={`flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all duration-300 ${order.completed ? 'bg-emerald-500/5 border-emerald-500/40' : 'bg-slate-900/40 border-slate-700 hover:border-slate-500 shadow-sm'}`}
+                                        className={`flex items-start gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all duration-300 ${order.completed ? 'bg-emerald-500/5 border-emerald-500/40 shadow-emerald-500/5' : 'bg-slate-900/60 border-slate-700 hover:border-slate-500 hover:bg-slate-900/80 shadow-sm'}`}
                                     >
-                                        <div className={`mt-0.5 w-6 h-6 rounded-md border-2 flex items-center justify-center transition-all ${order.completed ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-slate-600'}`}>
+                                        <div className={`mt-0.5 w-6 h-6 rounded-md border-2 flex items-center justify-center transition-all ${order.completed ? 'bg-emerald-500 border-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 'border-slate-600 bg-slate-800'}`}>
                                             {order.completed && <CheckCircleIcon className="w-5 h-5" />}
                                         </div>
                                         <div className="flex-grow">
                                             <div className={`text-sm font-bold transition-colors ${order.completed ? 'text-emerald-400' : 'text-slate-200 group-hover:text-blue-400'}`}>
                                                 {order.label}
                                             </div>
-                                            <div className="text-[11px] text-slate-500 mt-1 leading-tight group-hover:text-slate-400">{order.description}</div>
+                                            <div className="text-[11px] text-slate-500 mt-1 leading-relaxed group-hover:text-slate-400">{order.description}</div>
                                         </div>
                                     </div>
                                     {order.completed && (
-                                        <div className="mt-2 ml-9 p-3 text-[11px] text-emerald-100/80 border-l-2 border-emerald-500/30 bg-emerald-500/5 rounded-r-lg animate-in slide-in-from-left-2 duration-300 italic">
+                                        <div className="mt-2 ml-10 p-3 text-[11px] text-emerald-200/90 border-l-4 border-emerald-500/50 bg-emerald-500/10 rounded-r-lg animate-in slide-in-from-left-4 duration-500 italic shadow-inner">
+                                            <span className="font-bold text-emerald-400 block mb-1">Clinical Rationale:</span>
                                             "{order.feedback}"
                                         </div>
                                     )}
@@ -329,7 +335,7 @@ const PatientDataPanel: React.FC<PatientDataPanelProps> = ({
                     {evaluation && (
                         <div className="pb-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
                              <div className={`p-6 rounded-xl border mb-6 flex flex-col items-center justify-center text-center shadow-xl ${getScoreColor(evaluation.score)}`}>
-                                <div className="text-[10px] uppercase tracking-widest font-black mb-1 opacity-60">Performance Metric</div>
+                                <div className="text-[10px] uppercase tracking-widest font-black mb-1 opacity-60">Surgical Aptitude</div>
                                 <div className="text-6xl font-black mb-2">{evaluation.score}</div>
                                 <div className="text-sm font-semibold max-w-sm">{evaluation.overallSummary}</div>
                              </div>
@@ -349,17 +355,6 @@ const PatientDataPanel: React.FC<PatientDataPanelProps> = ({
                                 ))}
                              </div>
 
-                             {evaluation.missedOpportunities.length > 0 && (
-                                <div className="mb-6">
-                                    <h4 className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-3 ml-1">Clinical Gaps</h4>
-                                    <ul className="list-disc list-inside space-y-2 text-xs text-slate-400 bg-slate-800/50 p-4 rounded-lg border border-slate-700">
-                                        {evaluation.missedOpportunities.map((op, i) => (
-                                            <li key={i}>{op}</li>
-                                        ))}
-                                    </ul>
-                                </div>
-                             )}
-
                              <div className="p-5 bg-gradient-to-br from-blue-600/20 to-indigo-600/20 border border-blue-500/30 rounded-xl">
                                 <div className="flex items-center gap-2 mb-2">
                                     <div className="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></div>
@@ -377,7 +372,7 @@ const PatientDataPanel: React.FC<PatientDataPanelProps> = ({
                             <div className="w-8 h-8 rounded-full bg-blue-900/50 flex items-center justify-center">
                                 <ClipboardIcon className="w-5 h-5 text-blue-400" />
                             </div>
-                            Diagnostic Impression & Plan
+                            Surgical Management Plan
                          </h3>
                          <button 
                             onClick={handleToggleRecording}
@@ -389,7 +384,7 @@ const PatientDataPanel: React.FC<PatientDataPanelProps> = ({
                      <textarea
                         value={submission}
                         onChange={(e) => setSubmission(e.target.value)}
-                        placeholder="State your diagnosis and definitive surgical management strategy..."
+                        placeholder="Detail your diagnosis and proposed surgical strategy..."
                         className="w-full h-24 bg-slate-900 p-3 rounded-md border border-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-600 text-slate-200 text-sm resize-none"
                         disabled={isEvaluating}
                      />
@@ -398,7 +393,7 @@ const PatientDataPanel: React.FC<PatientDataPanelProps> = ({
                         disabled={isEvaluating || !submission.trim()}
                         className="mt-3 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-4 rounded-md transition-all shadow-lg active:scale-95 disabled:bg-slate-700 flex justify-center items-center gap-2"
                      >
-                        {isEvaluating ? <Spinner /> : <span>Finalize Evaluation</span>}
+                        {isEvaluating ? <Spinner /> : <span>Submit Plan for Grading</span>}
                      </button>
                 </div>
             </div>
